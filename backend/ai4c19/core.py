@@ -45,13 +45,15 @@ from tensorflow import keras
 import os
 import sys
 
-def main():
+def main(input):
     
     experiment = Experiment(
         api_key="pBIdcBtHz1ROYgtkqG0f3B4fD",
         project_name="ai4covid19",
         workspace="meoridlans97",
     )
+
+    print(f'Input file received: {input}')
 
     # path of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -61,16 +63,17 @@ def main():
 
     # try and find model on local
     # if models not found, train new models and save them to directory
-    if os.path.isdir(f'{dir_path}/models'):
-        ai4c19.load_esc(f'{dir_path}/models/esc50_model')
-        ai4c19.load_cv(f'{dir_path}/models/cv_model')
+    models_path = f'{dir_path}/models'
+    if os.path.isdir(models_path):
+        ai4c19.load_esc(models_path)
+        ai4c19.load_cv(models_path)
     else:
         features_df = extractMFCC_esc(dir_path)
         ai4c19.train_esc(features_df)
-        ai4c19.save_esc(f'{dir_path}/models/esc50_model')
+        ai4c19.save_esc(models_path)
         features_cv_df = extractMFCC_cv(dir_path)
         ai4c19.train_cv(features_cv_df)
-        ai4c19.save_cv(f'{dir_path}/models/cv_model')
+        ai4c19.save_cv(models_path)
 
     # prediction = ai4c19.predict(FILE_HERE)
 
@@ -299,36 +302,42 @@ class AI4Covid19():
 
     # saves the esc50 model in local files
     def save_esc(self, dir_path):
-        if not os.path.isdir(dir_path):
-            os.makedirs(dir_path)
-        self.model_esc.save(dir_path)
+        if not os.path.isdir(f'{dir_path}/esc50_model'):
+            os.makedirs(f'{dir_path}/esc50_model')
+        self.model_esc.save(f'{dir_path}/esc50_model')
+
+        np.save(f'{dir_path}/le_esc50.npy', self.le_esc.classes_)
 
     # saves the coughvid model in local files
     def save_cv(self, dir_path):
-        if not os.path.isdir(dir_path):
-            os.makedirs(dir_path)
-        self.model_cv.save(dir_path)
+        if not os.path.isdir(f'{dir_path}/cv_model'):
+            os.makedirs(f'{dir_path}/cv_model')
+        self.model_cv.save(f'{dir_path}/cv_model')
+
+        np.save(f'{dir_path}/le_cv.npy', self.le_cv.classes_)
 
     # loads trained models from local files
-    def load_models(self, dir_path):
-        print('Loading models...')
-        model_path = f'{dir_path}/models'
+    # def load_models(self, dir_path):
+    #     print('Loading models...')
+    #     model_path = f'{dir_path}/models'
         
-        self.model_esc = keras.models.load_model(f'{model_path}/esc50_model')
-        self.model_cv = keras.models.load_model(f'{model_path}/cv_model')
+    #     self.model_esc = keras.models.load_model(f'{model_path}/esc50_model')
+    #     self.model_cv = keras.models.load_model(f'{model_path}/cv_model')
 
-        print('Models loaded.')
+    #     print('Models loaded.')
 
     # loads trained ESC50 model
     def load_esc(self, dir_path):
         print('Loading ESC50 Model...')
-        self.model_esc = keras.models.load_model(dir_path)
+        self.model_esc = keras.models.load_model(f'{dir_path}/esc50_model')
+        self.le_esc.classes_ = np.load(f'{dir_path}/le_esc50.npy')
         print('Model loaded.')
 
     # loads trained coughvid model
     def load_cv(self, dir_path):
         print('Loading Coughvid Model...')
-        self.model_cv = keras.models.load_model(dir_path)
+        self.model_cv = keras.models.load_model(f'{dir_path}/cv_model')
+        self.le_cv.classes_ = np.load(f'{dir_path}/le_cv.npy')
         print('Model loaded.')
 
     def predict_cough(self, file):
