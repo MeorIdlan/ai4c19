@@ -44,8 +44,9 @@ from tensorflow import keras
 
 import os
 import sys
+import pathlib
 
-def main(input):
+def main(input, parent):
     
     experiment = Experiment(
         api_key="pBIdcBtHz1ROYgtkqG0f3B4fD",
@@ -55,7 +56,7 @@ def main(input):
 
     print(f'Input file received: {input}')
 
-    # path of this file
+    # path to this file's directory
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # create AI class
@@ -75,7 +76,7 @@ def main(input):
         ai4c19.train_cv(features_cv_df)
         ai4c19.save_cv(models_path)
 
-    # prediction = ai4c19.predict(FILE_HERE)
+    return ai4c19.predict_cough(input, parent)
 
 # helper method
 # extracts mfcc from file
@@ -340,5 +341,24 @@ class AI4Covid19():
         self.le_cv.classes_ = np.load(f'{dir_path}/le_cv.npy')
         print('Model loaded.')
 
-    def predict_cough(self, file):
-        pass
+    def predict_cough(self, file, parent):
+        filepath = f'{parent}\{file}'
+        print(filepath)
+        processed = generateMFCC(filepath)
+        processed = np.array([processed])
+
+        # predict if there is cough
+        prediction_cough = self.model_esc.predict_on_batch(processed)
+        # print(prediction_cough)
+        classes = np.argmax(prediction_cough, axis=1)
+        # print(classes)
+        # print(self.le_esc.classes_[classes])
+
+        # predict if there is covid
+        prediction_covid = self.model_cv.predict_on_batch(processed)
+        # print(prediction_covid)
+        classes_cv = np.argmax(prediction_covid, axis=1)
+        # print(classes_cv)
+        # print(self.le_cv.classes_[classes_cv])
+
+        return classes_cv[0]
